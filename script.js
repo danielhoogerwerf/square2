@@ -9,7 +9,6 @@ class GameInit {
   initializer() {
     const scriptTag = document.getElementsByTagName("script")[0];
     const canvasDiv = document.createElement("div");
-    this.canvas.style.cursor = "none";
     this.canvas.width = this.x;
     this.canvas.height = this.y;
     this.canvas.id = "new-canvas";
@@ -45,10 +44,10 @@ class Player {
 
 // Catch
 class Catch {
-  constructor(direction, x, y) {
+  constructor(direction, x, y, speed) {
     this.cWidth = 25;
     this.cHeight = 25;
-    this.cSpeed = 4;
+    this.cSpeed = speed;
     this.cDirection = direction;
     this.canvasWidth = x;
     this.canvasHeight = y;
@@ -56,8 +55,8 @@ class Catch {
     this.cY = this.getStartingYPos();
   }
 
-  drawCatch(ctx) {
-    ctx.fillStyle = "green";
+  drawCatch(ctx, transparency) {
+    ctx.fillStyle = `rgba(10, 44, 39, ${transparency})`;
     ctx.fillRect(this.cX, this.cY, this.cWidth, this.cHeight);
   }
 
@@ -120,10 +119,10 @@ class Catch {
 
 // Enemies
 class Enemies {
-  constructor(direction, x, y) {
+  constructor(direction, x, y, speed) {
     this.eWidth = 25;
     this.eHeight = 25;
-    this.eSpeed = 4;
+    this.eSpeed = speed;
     this.eDirection = direction;
     this.canvasWidth = x;
     this.canvasHeight = y;
@@ -131,8 +130,8 @@ class Enemies {
     this.eY = this.getStartingYPos();
   }
 
-  drawEnemy(ctx) {
-    ctx.fillStyle = "red";
+  drawEnemy(ctx, transparency) {
+    ctx.fillStyle = `rgba(240, 44, 39, ${transparency})`;
     ctx.fillRect(this.eX, this.eY, this.eWidth, this.eHeight);
   }
 
@@ -198,23 +197,32 @@ class Game {
   constructor() {
     this.game = new GameInit();
     this.player = new Player();
-    this.genCatch = [];
-    this.genEnemy = [];
     this.directionArray = ["L", "R", "T", "B"];
-    this.frameCount = 0;
-    this.points = 0;
-    this.gameStatus = 'playgame';
   }
 
   startGame() {
     this.game.initializer();
+    this.clearVars("beginscreen");
     window.requestAnimationFrame(this.loopGame.bind(this));
     this.addListeners(this.player);
   }
 
+  clearVars(status) {
+    this.genCatch = [];
+    this.genEnemy = [];
+    this.frameCount = 0;
+    this.points = 0;
+    this.gameStatus = status;
+  }
+
   generateRandomDirection() {
-    let randomDirection = this.directionArray[Math.floor(Math.random() * this.directionArray.length)];
+    const randomDirection = this.directionArray[Math.floor(Math.random() * this.directionArray.length)];
     return randomDirection;
+  }
+
+  generateRandomSpeed() {
+    const randomSpeed = Math.floor(Math.random() * (12 - 4) + 4);
+    return randomSpeed;
   }
 
   collisionDetection(x, y, w, h) {
@@ -244,16 +252,116 @@ class Game {
     });
   }
 
-  beginScreen(ctx) {}
+  beginScreen(ctx) {
+    this.game.canvas.style.cursor = "default";
+    switch (this.frameCount) {
+      case 40:
+        this.genEnemy.push(
+          new Enemies(this.generateRandomDirection(), this.game.x, this.game.y, this.generateRandomSpeed())
+        );
+        break;
+      case 48:
+        this.genCatch.push(
+          new Catch(this.generateRandomDirection(), this.game.x, this.game.y, this.generateRandomSpeed())
+        );
+        this.frameCount = 0;
+        break;
+    }
+    this.frameCount++;
+
+    this.genEnemy.forEach((enemy, index) => {
+      enemy.moveEnemy();
+      enemy.drawEnemy(ctx, 0.2);
+      if (enemy.eX > this.game.x + 200 || enemy.eX < -200) {
+        this.genEnemy.splice(index, 1);
+      }
+      if (enemy.eY > this.game.y + 200 || enemy.eY < -200) {
+        this.genEnemy.splice(index, 1);
+      }
+    });
+
+    this.genCatch.forEach((catcher, index) => {
+      catcher.moveCatch();
+      catcher.drawCatch(ctx, 0.2);
+      if (catcher.cX > this.game.x + 200 || catcher.cX < -200) {
+        this.genCatch.splice(index, 1);
+      }
+      if (catcher.cY > this.game.y + 200 || catcher.cY < -200) {
+        this.genCatch.splice(index, 1);
+      }
+    });
+
+    // needed to address scoping issues inside the img.onload function
+    let parent = this;
+    const img = new Image();
+    img.onload = function() {
+      ctx.clearRect(0, 0, parent.game.x, parent.game.y);
+      ctx.drawImage(img, (parent.game.x - this.width) / 2, (parent.game.y - this.height) / 2 - 100);
+    };
+    img.src = "img/logosmall.png";
+    ctx.fillStyle = "black";
+
+    function playButton(context) {
+      context.beginPath();
+      context.font = "40pt Montserrat";
+      context.fillStyle = "#000000";
+      context.fillText("PLAY", (parent.game.x - img.width) / 2 + 4, (parent.game.y - img.height) / 2 + 230);
+      context.fillText("RULES", (parent.game.x - img.width) / 2 + 268, (parent.game.y - img.height) / 2 + 230);
+    }
+    playButton(ctx);
+
+    //The rectangle should have x,y,width,height properties
+    const buttonRect = {
+      pX: (parent.game.x - img.width) / 2 + 4,
+      pY: (parent.game.y - img.height) / 2 + 190,
+      rX: (parent.game.x - img.width) / 2 + 268,
+      rY: (parent.game.y - img.height) / 2 + 190,
+      width: 140,
+      height: 50
+    };
+    // Listen for mouse clicks
+    const mouseClicks = e => {
+      let mouseX;
+      let mouseY;
+      const rect = this.game.canvas.getBoundingClientRect();
+      mouseX = e.clientX - rect.left;
+      mouseY = e.clientY - rect.top;
+      if (
+        mouseX > buttonRect.pX &&
+        mouseX < buttonRect.pX + buttonRect.width &&
+        mouseY < buttonRect.pY + buttonRect.height &&
+        mouseY > buttonRect.pY
+      ) {
+        this.clearVars("playgame");
+        this.game.canvas.removeEventListener("click", mouseClicks, false);
+      }
+      if (
+        mouseX > buttonRect.rX &&
+        mouseX < buttonRect.rX + buttonRect.width &&
+        mouseY < buttonRect.rY + buttonRect.height &&
+        mouseY > buttonRect.rY
+      ) {
+        console.log("clicked inside rect");
+        this.game.canvas.removeEventListener("click", mouseClicks, false);
+      }
+    };
+
+    this.game.canvas.addEventListener("click", mouseClicks, false);
+  }
 
   playGame(ctx) {
+    ctx.clearRect(0, 0, this.game.x, this.game.y);
     // make a counter and then kick off a new enemy and catcher - calculated with 60FPS
     switch (this.frameCount) {
       case 40:
-        this.genEnemy.push(new Enemies(this.generateRandomDirection(), this.game.x, this.game.y));
+        this.genEnemy.push(
+          new Enemies(this.generateRandomDirection(), this.game.x, this.game.y, this.generateRandomSpeed())
+        );
         break;
       case 48:
-        this.genCatch.push(new Catch(this.generateRandomDirection(), this.game.x, this.game.y));
+        this.genCatch.push(
+          new Catch(this.generateRandomDirection(), this.game.x, this.game.y, this.generateRandomSpeed())
+        );
         this.frameCount = 0;
         break;
     }
@@ -264,11 +372,12 @@ class Game {
 
     // Draw player
     this.player.drawPlayer(ctx);
+    this.game.canvas.style.cursor = "none";
 
     // Draw enemies and remove them if they are off-screen
     this.genEnemy.forEach((enemy, index) => {
       enemy.moveEnemy();
-      enemy.drawEnemy(ctx);
+      enemy.drawEnemy(ctx, 1);
       if (enemy.eX > this.game.x + 200 || enemy.eX < -200) {
         this.genEnemy.splice(index, 1);
       }
@@ -278,15 +387,14 @@ class Game {
 
       // Check for collision and if so, it's game over :-)
       if (this.collisionDetection(enemy.eX, enemy.eY, enemy.eWidth, enemy.eHeight)) {
-        console.log("Game over!");
-        this.gameStatus = 'gameover';
+        this.gameStatus = "gameover";
       }
     });
 
     // Draw the catcher squares and remove them if they are off-screen
     this.genCatch.forEach((catcher, index) => {
       catcher.moveCatch();
-      catcher.drawCatch(ctx);
+      catcher.drawCatch(ctx, 1);
       if (catcher.cX > this.game.x + 200 || catcher.cX < -200) {
         this.genCatch.splice(index, 1);
       }
@@ -303,34 +411,37 @@ class Game {
   }
 
   endGame(ctx) {
-    this.gameStatus = 'stopgame';
+    ctx.clearRect(0, 0, this.game.x, this.game.y);
+    ctx.font = "80pt Montserrat";
+    ctx.fillText("Game Over!", this.game.x / 2, this.game.y / 2);
+    this.gameStatus = "stopgame";
   }
-  
+
   helpScreen(ctx) {}
 
   loopGame() {
     // Set up the canvas elements
     const ctx = this.game.context;
-    ctx.clearRect(0, 0, this.game.x, this.game.y);
+    //ctx.clearRect(0, 0, this.game.x, this.game.y);
 
     switch (this.gameStatus) {
-      case '':
-        this.beginScreen(ctx)
+      case "beginscreen":
+        this.beginScreen(ctx);
         break;
-      case 'playgame':
+      case "playgame":
         this.playGame(ctx);
         break;
-      case 'gameover':
+      case "gameover":
         this.endGame(ctx);
         break;
-      case 'helpscreen':
+      case "helpscreen":
         this.helpScreen(ctx);
     }
 
-    console.log(this.gameStatus)
+    //console.log(this.gameStatus);
 
     // Loop, except when it's game over
-    if (this.gameStatus !== 'stopgame') {
+    if (this.gameStatus !== "stopgame") {
       window.requestAnimationFrame(this.loopGame.bind(this));
     }
   }

@@ -6,6 +6,10 @@ html, body {
     font-family: 'Montserrat', sans-serif;
 }
 
+canvas {
+    border: 1px solid black;
+}
+
 #canvas-container {
     display: flex;
     flex-flow: column nowrap;
