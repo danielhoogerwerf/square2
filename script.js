@@ -32,13 +32,20 @@ class Player {
 
   drawPlayer(ctx) {
     ctx.fillStyle = "black";
-    //ctx.save();
-    //ctx.translate(this.pX, this.pY);
+    // ctx.save();
+    // ctx.translate(this.pX, this.pY);
     //ctx.rotate(this.pAngle);
     //ctx.fillRect(this.pWidth / -2, this.pHeight / -2, this.pWidth, this.pHeight);
     ctx.fillRect(this.pX, this.pY, this.pWidth, this.pHeight);
     //this.pAngle += (Math.PI / 180) * 1;
-    //ctx.restore();
+    // ctx.restore();
+  }
+
+  increaseSize() {
+    this.pWidth += 1;
+    this.pHeight += 1;
+    this.pX -= 0.5;
+    this.pY -= 0.5;
   }
 }
 
@@ -269,6 +276,7 @@ class Game {
     }
     this.frameCount++;
 
+    // Draw enemies and remove them if they are off-screen
     this.genEnemy.forEach((enemy, index) => {
       enemy.moveEnemy();
       enemy.drawEnemy(ctx, 0.2);
@@ -280,6 +288,7 @@ class Game {
       }
     });
 
+    // Draw the catcher squares and remove them if they are off-screen
     this.genCatch.forEach((catcher, index) => {
       catcher.moveCatch();
       catcher.drawCatch(ctx, 0.2);
@@ -295,22 +304,24 @@ class Game {
     let parent = this;
     const img = new Image();
     img.onload = function() {
+
+      // Clear the screen
       ctx.clearRect(0, 0, parent.game.x, parent.game.y);
       ctx.drawImage(img, (parent.game.x - this.width) / 2, (parent.game.y - this.height) / 2 - 100);
     };
     img.src = "img/logosmall.png";
     ctx.fillStyle = "black";
 
-    function playButton(context) {
+    function menuButtons(context) {
       context.beginPath();
       context.font = "40pt Montserrat";
       context.fillStyle = "#000000";
       context.fillText("PLAY", (parent.game.x - img.width) / 2 + 4, (parent.game.y - img.height) / 2 + 230);
       context.fillText("RULES", (parent.game.x - img.width) / 2 + 268, (parent.game.y - img.height) / 2 + 230);
     }
-    playButton(ctx);
+    menuButtons(ctx);
 
-    //The rectangle should have x,y,width,height properties
+    //The rectangle provides the click area for the buttons
     const buttonRect = {
       pX: (parent.game.x - img.width) / 2 + 4,
       pY: (parent.game.y - img.height) / 2 + 190,
@@ -319,6 +330,7 @@ class Game {
       width: 140,
       height: 50
     };
+
     // Listen for mouse clicks
     const mouseClicks = e => {
       let mouseX;
@@ -326,6 +338,8 @@ class Game {
       const rect = this.game.canvas.getBoundingClientRect();
       mouseX = e.clientX - rect.left;
       mouseY = e.clientY - rect.top;
+
+      // Check click for PLAY
       if (
         mouseX > buttonRect.pX &&
         mouseX < buttonRect.pX + buttonRect.width &&
@@ -335,6 +349,8 @@ class Game {
         this.clearVars("playgame");
         this.game.canvas.removeEventListener("click", mouseClicks, false);
       }
+
+      // Check click for RULES
       if (
         mouseX > buttonRect.rX &&
         mouseX < buttonRect.rX + buttonRect.width &&
@@ -350,7 +366,9 @@ class Game {
   }
 
   playGame(ctx) {
+    // Clear the screen
     ctx.clearRect(0, 0, this.game.x, this.game.y);
+
     // make a counter and then kick off a new enemy and catcher - calculated with 60FPS
     switch (this.frameCount) {
       case 40:
@@ -405,6 +423,7 @@ class Game {
       // Check for collision and if so, remove the catcher and add a point
       if (this.collisionDetection(catcher.cX, catcher.cY, catcher.cWidth, catcher.cHeight)) {
         this.points++;
+        this.player.increaseSize();
         this.genCatch.splice(index, 1);
       }
     });
@@ -422,7 +441,8 @@ class Game {
   loopGame() {
     // Set up the canvas elements
     const ctx = this.game.context;
-    //ctx.clearRect(0, 0, this.game.x, this.game.y);
+    // ctx.clearRect(0, 0, this.game.x, this.game.y);
+    // disabled because it's moved.
 
     switch (this.gameStatus) {
       case "beginscreen":
@@ -437,8 +457,6 @@ class Game {
       case "helpscreen":
         this.helpScreen(ctx);
     }
-
-    //console.log(this.gameStatus);
 
     // Loop, except when it's game over
     if (this.gameStatus !== "stopgame") {
