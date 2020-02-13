@@ -205,6 +205,7 @@ class Game {
     this.game = new GameInit();
     this.player = new Player();
     this.directionArray = ["L", "R", "T", "B"];
+    this.points = 0;
   }
 
   startGame() {
@@ -260,7 +261,11 @@ class Game {
   }
 
   beginScreen(ctx) {
+    const parent = this;
+    // Reset the mouse cursor to normal
     this.game.canvas.style.cursor = "default";
+
+    // Create background squares
     switch (this.frameCount) {
       case 40:
         this.genEnemy.push(
@@ -301,25 +306,24 @@ class Game {
     });
 
     // needed to address scoping issues inside the img.onload function
-    let parent = this;
+
     const img = new Image();
     img.onload = function() {
-
       // Clear the screen
       ctx.clearRect(0, 0, parent.game.x, parent.game.y);
-      ctx.drawImage(img, (parent.game.x - this.width) / 2, (parent.game.y - this.height) / 2 - 100);
+      //console.log('drawing image')
+      ctx.drawImage(img, (parent.game.x - 456) / 2, (parent.game.y - 450) / 2);
     };
     img.src = "img/logosmall.png";
     ctx.fillStyle = "black";
 
-    function menuButtons(context) {
-      context.beginPath();
-      context.font = "40pt Montserrat";
-      context.fillStyle = "#000000";
-      context.fillText("PLAY", (parent.game.x - img.width) / 2 + 4, (parent.game.y - img.height) / 2 + 230);
-      context.fillText("RULES", (parent.game.x - img.width) / 2 + 268, (parent.game.y - img.height) / 2 + 230);
-    }
-    menuButtons(ctx);
+    // Draw menu buttons
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.font = "40pt Montserrat";
+    ctx.fillStyle = "#000000";
+    ctx.fillText("PLAY", (this.game.x - 456) / 2 + 4, (this.game.y - 250) / 2 + 230);
+    ctx.fillText("RULES", (this.game.x - 456) / 2 + 268, (this.game.y - 250) / 2 + 230);
 
     //The rectangle provides the click area for the buttons
     const buttonRect = {
@@ -327,7 +331,7 @@ class Game {
       pY: (parent.game.y - img.height) / 2 + 190,
       rX: (parent.game.x - img.width) / 2 + 268,
       rY: (parent.game.y - img.height) / 2 + 190,
-      width: 140,
+      width: 200,
       height: 50
     };
 
@@ -346,22 +350,24 @@ class Game {
         mouseY < buttonRect.pY + buttonRect.height &&
         mouseY > buttonRect.pY
       ) {
-        this.clearVars("playgame");
         this.game.canvas.removeEventListener("click", mouseClicks, false);
+        this.game.canvas.removeEventListener("click", mouseClicks, false);
+        this.clearVars("playgame");
+
       }
 
       // Check click for RULES
-      if (
+     if (
         mouseX > buttonRect.rX &&
         mouseX < buttonRect.rX + buttonRect.width &&
         mouseY < buttonRect.rY + buttonRect.height &&
         mouseY > buttonRect.rY
       ) {
-        console.log("clicked inside rect");
         this.game.canvas.removeEventListener("click", mouseClicks, false);
+        this.game.canvas.removeEventListener("click", mouseClicks, false);
+        this.gameStatus = "rulesscreen";   
       }
     };
-
     this.game.canvas.addEventListener("click", mouseClicks, false);
   }
 
@@ -429,19 +435,200 @@ class Game {
     });
   }
 
-  endGame(ctx) {
-    ctx.clearRect(0, 0, this.game.x, this.game.y);
-    ctx.font = "80pt Montserrat";
-    ctx.fillText("Game Over!", this.game.x / 2, this.game.y / 2);
-    this.gameStatus = "stopgame";
+  rulesScreen(ctx) {
+    // Create background squares
+    switch (this.frameCount) {
+      case 40:
+        this.genEnemy.push(
+          new Enemies(this.generateRandomDirection(), this.game.x, this.game.y, this.generateRandomSpeed())
+        );
+        break;
+      case 48:
+        this.genCatch.push(
+          new Catch(this.generateRandomDirection(), this.game.x, this.game.y, this.generateRandomSpeed())
+        );
+        this.frameCount = 0;
+        break;
+    }
+    this.frameCount++;
+
+    // Draw enemies and remove them if they are off-screen
+    this.genEnemy.forEach((enemy, index) => {
+      enemy.moveEnemy();
+      enemy.drawEnemy(ctx, 0.2);
+      if (enemy.eX > this.game.x + 200 || enemy.eX < -200) {
+        this.genEnemy.splice(index, 1);
+      }
+      if (enemy.eY > this.game.y + 200 || enemy.eY < -200) {
+        this.genEnemy.splice(index, 1);
+      }
+    });
+
+    // Draw the catcher squares and remove them if they are off-screen
+    this.genCatch.forEach((catcher, index) => {
+      catcher.moveCatch();
+      catcher.drawCatch(ctx, 0.2);
+      if (catcher.cX > this.game.x + 200 || catcher.cX < -200) {
+        this.genCatch.splice(index, 1);
+      }
+      if (catcher.cY > this.game.y + 200 || catcher.cY < -200) {
+        this.genCatch.splice(index, 1);
+      }
+    });
+
+    // Clear the screen
+    // ctx.clearRect(0, 0, this.game.x, this.game.y);
+
+    // needed to address scoping issues inside the img.onload function
+    let parent = this;
+    const img = new Image();
+    img.onload = function() {
+      // Clear the screen
+      ctx.clearRect(0, 0, parent.game.x, parent.game.y);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(img, 15, 15, this.width / 2, this.height / 2);
+    };
+    img.src = "img/logosmall.png";
+    ctx.fillStyle = "black";
+
+    // Place legenda text and line
+    ctx.fillStyle = "rgba(69, 67, 70, 1.0)";
+    ctx.font = "400 14pt Montserrat";
+    ctx.fillText("Legenda", 20, 185);
+    ctx.beginPath();
+    ctx.lineWidth = 2;
+    ctx.moveTo(60, 211);
+    ctx.lineTo(60, 388);
+    ctx.strokeStyle = "rgba(216, 44, 40, 0.7)";
+    ctx.stroke();
+    ctx.closePath();
+
+    // Draw Catch rectangle
+    ctx.fillStyle = "rgba(10, 44, 39, 1)";
+    ctx.fillRect(20, 212, 25, 25);
+
+    // Draw Enemy rectangle
+    ctx.fillStyle = "rgba(240, 44, 39, 1)";
+    ctx.fillRect(20, 262, 25, 25);
+
+    // Draw Black powerup
+    ctx.beginPath();
+    ctx.arc(32, 325, 13, (Math.PI / 180) * 0, (Math.PI / 180) * 360);
+    ctx.fillStyle = "black";
+    ctx.fill();
+    ctx.closePath();
+
+    // Draw Red powerup
+    ctx.beginPath();
+    ctx.arc(32, 375, 13, (Math.PI / 180) * 0, (Math.PI / 180) * 360);
+    ctx.fillStyle = "Red";
+    ctx.fill();
+    ctx.closePath();
+
+    // Place rules text
+    ctx.fillStyle = "black";
+    ctx.font = "14pt Montserrat";
+    ctx.fillText("Catching this square gives you points, but it increases your shape.", 70, 230);
+    ctx.fillText("Touching this square means 'game over'.", 70, 280);
+    ctx.fillText("Powerup: can either reset the size of your shape or give invincibility for a few seconds.", 70, 332);
+    ctx.fillText("Careful: causes all the squares to be red for a few seconds.", 70, 382);
+
+    // Draw rectangle button
+    ctx.font = "40pt Montserrat";
+    ctx.fillStyle = "#000000";
+    ctx.fillText("RETURN", this.game.x / 2 - 100, this.game.y / 1.2);
+
+    //The rectangle provides the click area for the button
+    const buttonRectRules = {
+      pX: parent.game.x / 2 - 90,
+      pY: parent.game.y / 1.2 - 40,
+      width: 230,
+      height: 50
+    };
+
+    // Listen for mouse click
+    const mouseClick = e => {
+      let mouseX;
+      let mouseY;
+      const rect = this.game.canvas.getBoundingClientRect();
+      mouseX = e.clientX - rect.left;
+      mouseY = e.clientY - rect.top;
+
+      // Check click for RETURN
+      if (
+        mouseX > buttonRectRules.pX &&
+        mouseX < buttonRectRules.pX + buttonRectRules.width &&
+        mouseY < buttonRectRules.pY + buttonRectRules.height &&
+        mouseY > buttonRectRules.pY
+      ) {
+        //console.log("Clicked!!");
+        document.removeEventListener("click", mouseClick);
+        this.gameStatus = "beginscreen";
+      }
+    };
+    this.game.canvas.addEventListener("click", mouseClick, false);
   }
 
-  helpScreen(ctx) {}
+  endGame(ctx) {
+    const parent = this;
+    this.game.canvas.style.cursor = "default";
+    // Clear screen
+    ctx.clearRect(0, 0, this.game.x, this.game.y);
+
+    // Draw 'Game Over' text
+    ctx.fillStyle = "black";
+    ctx.font = "60pt Montserrat";
+    ctx.textAlign = "center";
+    ctx.fillText("Game Over!", this.game.x / 2, this.game.y / 2.5);
+    ctx.font = "30pt Montserrat";
+    ctx.fillText("Final score: " + this.points, this.game.x / 2, this.game.y / 1.8);
+
+    // Draw rectangle button
+    ctx.font = "40pt Montserrat";
+    ctx.fillStyle = "#000000";
+    ctx.fillText("BACK TO MENU", this.game.x / 2, this.game.y / 1.2);
+
+    //The rectangle provides the click area for the button
+    const buttonRectGO = {
+      pX: parent.game.x / 4,
+      pY: parent.game.y / 1.3,
+      width: 445,
+      height: 80
+    };
+
+    // Listen for mouse click
+    const mouseClickGO = e => {
+      let mouseX;
+      let mouseY;
+      const rect = this.game.canvas.getBoundingClientRect();
+      mouseX = e.clientX - rect.left;
+      mouseY = e.clientY - rect.top;
+      //console.log(`X: ${mouseX}, pX: ${buttonRectGO.pX} // Y: ${mouseY}, pY: ${buttonRectGO.pY}`);
+
+      // Check click for MENU
+      if (
+        mouseX > buttonRectGO.pX &&
+        mouseX < buttonRectGO.pX + buttonRectGO.width &&
+        mouseY < buttonRectGO.pY + buttonRectGO.height &&
+        mouseY > buttonRectGO.pY
+      ) {
+        document.removeEventListener("click", mouseClickGO);
+        this.gameStatus = "beginscreen";
+        //console.log('Clicked!!')
+        //this.game.canvas.removeEventListener("click", mouseClickGO, false);
+      }
+    };
+    this.game.canvas.addEventListener("click", mouseClickGO, false);
+
+    //this.gameStatus = "stopgame";
+  }
 
   loopGame() {
     // Set up the canvas elements
     const ctx = this.game.context;
-    // ctx.clearRect(0, 0, this.game.x, this.game.y);
+    //ctx.clearRect(0, 0, this.game.x, this.game.y);
+    //console.log('clear screen')
     // disabled because it's moved.
 
     switch (this.gameStatus) {
@@ -454,18 +641,16 @@ class Game {
       case "gameover":
         this.endGame(ctx);
         break;
-      case "helpscreen":
-        this.helpScreen(ctx);
+      case "rulesscreen":
+        this.rulesScreen(ctx);
     }
 
     // Loop, except when it's game over
-    if (this.gameStatus !== "stopgame") {
-      window.requestAnimationFrame(this.loopGame.bind(this));
-    }
+    window.requestAnimationFrame(this.loopGame.bind(this));
   }
 }
 
 // Running the game
 
-const sqSquared = new Game();
+let sqSquared = new Game();
 sqSquared.startGame();
