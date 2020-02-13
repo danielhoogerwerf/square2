@@ -212,7 +212,8 @@ class Game {
     this.game.initializer();
     this.clearVars("beginscreen");
     window.requestAnimationFrame(this.loopGame.bind(this));
-    this.addListeners(this.player);
+    this.addMousemoveListener(this.player);
+    this.addClickListener();
   }
 
   clearVars(status) {
@@ -220,6 +221,8 @@ class Game {
     this.genEnemy = [];
     this.frameCount = 0;
     this.points = 0;
+    this.player.pWidth = 25;
+    this.player.pHeight = 25;
     this.gameStatus = status;
   }
 
@@ -252,7 +255,7 @@ class Game {
     ctx.fillText("Score: " + amount, this.game.x / 2, this.game.y / 2);
   }
 
-  addListeners() {
+  addMousemoveListener() {
     document.addEventListener("mousemove", e => {
       const rect = this.game.canvas.getBoundingClientRect();
       this.player.pX = e.clientX - rect.left;
@@ -260,8 +263,92 @@ class Game {
     });
   }
 
+  addClickListener() {
+    // Needs the bind otherwise it listens to the window object.
+    document.addEventListener("click", this.listenerDefinitions.bind(this));
+  }
+
+  listenerDefinitions(e) {
+    // Connected to addClickListener()
+    const gameState = this.gameStatus;
+    let mouseX;
+    let mouseY;
+    const rect = this.game.canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+
+    // Define the clickable areas for the game sections
+    const beginScreenButtons = {
+      pX: this.game.x / 3 - 80,
+      pY: this.game.y / 2.5 + 140,
+      rX: this.game.x / 3 + 190,
+      rY: this.game.y / 2.5 + 140,
+      width: 180,
+      height: 45
+    };
+
+    const rulesScreenButton = {
+      pX: this.game.x / 2 - 93,
+      pY: this.game.y / 1.2 - 40,
+      width: 220,
+      height: 60
+    };
+
+    const gameOverButton = {
+      pX: this.game.x / 4 + 14,
+      pY: this.game.y / 1.3,
+      width: 423,
+      height: 60
+    };
+
+    switch (gameState) {
+      case "beginscreen":
+        // The click area for the buttons PLAY & RULES on the begin screen
+        if (
+          mouseX > beginScreenButtons.pX &&
+          mouseX < beginScreenButtons.pX + beginScreenButtons.width &&
+          mouseY < beginScreenButtons.pY + beginScreenButtons.height &&
+          mouseY > beginScreenButtons.pY
+        ) {
+          this.clearVars("playgame");
+        } else if (
+          mouseX > beginScreenButtons.rX &&
+          mouseX < beginScreenButtons.rX + beginScreenButtons.width &&
+          mouseY < beginScreenButtons.rY + beginScreenButtons.height &&
+          mouseY > beginScreenButtons.rY
+        ) {
+          this.gameStatus = "rulesscreen";
+        }
+        break;
+      case "rulesscreen":
+        // The click area for the button RETURN on the rules screen
+        if (
+          mouseX > rulesScreenButton.pX &&
+          mouseX < rulesScreenButton.pX + rulesScreenButton.width &&
+          mouseY < rulesScreenButton.pY + rulesScreenButton.height &&
+          mouseY > rulesScreenButton.pY
+        ) {
+          this.gameStatus = "beginscreen";
+        }
+        break;
+      case "gameover":
+        // The click area for the button RETURN TO MENU on the game over screen
+        if (
+          mouseX > gameOverButton.pX &&
+          mouseX < gameOverButton.pX + gameOverButton.width &&
+          mouseY < gameOverButton.pY + gameOverButton.height &&
+          mouseY > gameOverButton.pY
+        ) {
+          this.clearVars("beginscreen");
+        }
+        break;
+    }
+  }
+
   beginScreen(ctx) {
+    // Needed for scoping issues
     const parent = this;
+
     // Reset the mouse cursor to normal
     this.game.canvas.style.cursor = "default";
 
@@ -324,51 +411,108 @@ class Game {
     ctx.fillStyle = "#000000";
     ctx.fillText("PLAY", (this.game.x - 456) / 2 + 4, (this.game.y - 250) / 2 + 230);
     ctx.fillText("RULES", (this.game.x - 456) / 2 + 268, (this.game.y - 250) / 2 + 230);
+  }
 
-    //The rectangle provides the click area for the buttons
-    const buttonRect = {
-      pX: (parent.game.x - img.width) / 2 + 4,
-      pY: (parent.game.y - img.height) / 2 + 190,
-      rX: (parent.game.x - img.width) / 2 + 268,
-      rY: (parent.game.y - img.height) / 2 + 190,
-      width: 200,
-      height: 50
-    };
+  rulesScreen(ctx) {
+    // Create background squares
+    switch (this.frameCount) {
+      case 40:
+        this.genEnemy.push(
+          new Enemies(this.generateRandomDirection(), this.game.x, this.game.y, this.generateRandomSpeed())
+        );
+        break;
+      case 48:
+        this.genCatch.push(
+          new Catch(this.generateRandomDirection(), this.game.x, this.game.y, this.generateRandomSpeed())
+        );
+        this.frameCount = 0;
+        break;
+    }
+    this.frameCount++;
 
-    // Listen for mouse clicks
-    const mouseClicks = e => {
-      let mouseX;
-      let mouseY;
-      const rect = this.game.canvas.getBoundingClientRect();
-      mouseX = e.clientX - rect.left;
-      mouseY = e.clientY - rect.top;
-
-      // Check click for PLAY
-      if (
-        mouseX > buttonRect.pX &&
-        mouseX < buttonRect.pX + buttonRect.width &&
-        mouseY < buttonRect.pY + buttonRect.height &&
-        mouseY > buttonRect.pY
-      ) {
-        this.game.canvas.removeEventListener("click", mouseClicks, false);
-        this.game.canvas.removeEventListener("click", mouseClicks, false);
-        this.clearVars("playgame");
-
+    // Draw enemies and remove them if they are off-screen
+    this.genEnemy.forEach((enemy, index) => {
+      enemy.moveEnemy();
+      enemy.drawEnemy(ctx, 0.2);
+      if (enemy.eX > this.game.x + 200 || enemy.eX < -200) {
+        this.genEnemy.splice(index, 1);
       }
-
-      // Check click for RULES
-     if (
-        mouseX > buttonRect.rX &&
-        mouseX < buttonRect.rX + buttonRect.width &&
-        mouseY < buttonRect.rY + buttonRect.height &&
-        mouseY > buttonRect.rY
-      ) {
-        this.game.canvas.removeEventListener("click", mouseClicks, false);
-        this.game.canvas.removeEventListener("click", mouseClicks, false);
-        this.gameStatus = "rulesscreen";   
+      if (enemy.eY > this.game.y + 200 || enemy.eY < -200) {
+        this.genEnemy.splice(index, 1);
       }
+    });
+
+    // Draw the catcher squares and remove them if they are off-screen
+    this.genCatch.forEach((catcher, index) => {
+      catcher.moveCatch();
+      catcher.drawCatch(ctx, 0.2);
+      if (catcher.cX > this.game.x + 200 || catcher.cX < -200) {
+        this.genCatch.splice(index, 1);
+      }
+      if (catcher.cY > this.game.y + 200 || catcher.cY < -200) {
+        this.genCatch.splice(index, 1);
+      }
+    });
+
+    // needed to address scoping issues inside the img.onload function
+    let parent = this;
+    const img = new Image();
+    img.onload = function() {
+      // Clear the screen
+      ctx.clearRect(0, 0, parent.game.x, parent.game.y);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(img, 15, 15, this.width / 2, this.height / 2);
     };
-    this.game.canvas.addEventListener("click", mouseClicks, false);
+    img.src = "img/logosmall.png";
+    ctx.fillStyle = "black";
+
+    // Place legenda text and line
+    ctx.fillStyle = "rgba(69, 67, 70, 1.0)";
+    ctx.font = "400 14pt Montserrat";
+    ctx.fillText("Legenda", 20, 185);
+    ctx.beginPath();
+    ctx.lineWidth = 2;
+    ctx.moveTo(60, 211);
+    ctx.lineTo(60, 388);
+    ctx.strokeStyle = "rgba(216, 44, 40, 0.7)";
+    ctx.stroke();
+    ctx.closePath();
+
+    // Draw Catch rectangle
+    ctx.fillStyle = "rgba(10, 44, 39, 1)";
+    ctx.fillRect(20, 212, 25, 25);
+
+    // Draw Enemy rectangle
+    ctx.fillStyle = "rgba(240, 44, 39, 1)";
+    ctx.fillRect(20, 262, 25, 25);
+
+    // Draw Black powerup
+    ctx.beginPath();
+    ctx.arc(32, 325, 13, (Math.PI / 180) * 0, (Math.PI / 180) * 360);
+    ctx.fillStyle = "black";
+    ctx.fill();
+    ctx.closePath();
+
+    // Draw Red powerup
+    ctx.beginPath();
+    ctx.arc(32, 375, 13, (Math.PI / 180) * 0, (Math.PI / 180) * 360);
+    ctx.fillStyle = "Red";
+    ctx.fill();
+    ctx.closePath();
+
+    // Place rules text
+    ctx.fillStyle = "black";
+    ctx.font = "14pt Montserrat";
+    ctx.fillText("Catching this square gives you points, but it increases your shape.", 70, 230);
+    ctx.fillText("Touching this square means 'game over'.", 70, 280);
+    ctx.fillText("Powerup: can either reset the size of your shape or give invincibility for a few seconds.", 70, 332);
+    ctx.fillText("Careful: causes all the squares to be red for a few seconds.", 70, 382);
+
+    // Place RETURN text
+    ctx.font = "40pt Montserrat";
+    ctx.fillStyle = "#000000";
+    ctx.fillText("RETURN", this.game.x / 2 - 100, this.game.y / 1.2);
   }
 
   playGame(ctx) {
@@ -435,144 +579,10 @@ class Game {
     });
   }
 
-  rulesScreen(ctx) {
-    // Create background squares
-    switch (this.frameCount) {
-      case 40:
-        this.genEnemy.push(
-          new Enemies(this.generateRandomDirection(), this.game.x, this.game.y, this.generateRandomSpeed())
-        );
-        break;
-      case 48:
-        this.genCatch.push(
-          new Catch(this.generateRandomDirection(), this.game.x, this.game.y, this.generateRandomSpeed())
-        );
-        this.frameCount = 0;
-        break;
-    }
-    this.frameCount++;
-
-    // Draw enemies and remove them if they are off-screen
-    this.genEnemy.forEach((enemy, index) => {
-      enemy.moveEnemy();
-      enemy.drawEnemy(ctx, 0.2);
-      if (enemy.eX > this.game.x + 200 || enemy.eX < -200) {
-        this.genEnemy.splice(index, 1);
-      }
-      if (enemy.eY > this.game.y + 200 || enemy.eY < -200) {
-        this.genEnemy.splice(index, 1);
-      }
-    });
-
-    // Draw the catcher squares and remove them if they are off-screen
-    this.genCatch.forEach((catcher, index) => {
-      catcher.moveCatch();
-      catcher.drawCatch(ctx, 0.2);
-      if (catcher.cX > this.game.x + 200 || catcher.cX < -200) {
-        this.genCatch.splice(index, 1);
-      }
-      if (catcher.cY > this.game.y + 200 || catcher.cY < -200) {
-        this.genCatch.splice(index, 1);
-      }
-    });
-
-    // Clear the screen
-    // ctx.clearRect(0, 0, this.game.x, this.game.y);
-
-    // needed to address scoping issues inside the img.onload function
-    let parent = this;
-    const img = new Image();
-    img.onload = function() {
-      // Clear the screen
-      ctx.clearRect(0, 0, parent.game.x, parent.game.y);
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
-      ctx.drawImage(img, 15, 15, this.width / 2, this.height / 2);
-    };
-    img.src = "img/logosmall.png";
-    ctx.fillStyle = "black";
-
-    // Place legenda text and line
-    ctx.fillStyle = "rgba(69, 67, 70, 1.0)";
-    ctx.font = "400 14pt Montserrat";
-    ctx.fillText("Legenda", 20, 185);
-    ctx.beginPath();
-    ctx.lineWidth = 2;
-    ctx.moveTo(60, 211);
-    ctx.lineTo(60, 388);
-    ctx.strokeStyle = "rgba(216, 44, 40, 0.7)";
-    ctx.stroke();
-    ctx.closePath();
-
-    // Draw Catch rectangle
-    ctx.fillStyle = "rgba(10, 44, 39, 1)";
-    ctx.fillRect(20, 212, 25, 25);
-
-    // Draw Enemy rectangle
-    ctx.fillStyle = "rgba(240, 44, 39, 1)";
-    ctx.fillRect(20, 262, 25, 25);
-
-    // Draw Black powerup
-    ctx.beginPath();
-    ctx.arc(32, 325, 13, (Math.PI / 180) * 0, (Math.PI / 180) * 360);
-    ctx.fillStyle = "black";
-    ctx.fill();
-    ctx.closePath();
-
-    // Draw Red powerup
-    ctx.beginPath();
-    ctx.arc(32, 375, 13, (Math.PI / 180) * 0, (Math.PI / 180) * 360);
-    ctx.fillStyle = "Red";
-    ctx.fill();
-    ctx.closePath();
-
-    // Place rules text
-    ctx.fillStyle = "black";
-    ctx.font = "14pt Montserrat";
-    ctx.fillText("Catching this square gives you points, but it increases your shape.", 70, 230);
-    ctx.fillText("Touching this square means 'game over'.", 70, 280);
-    ctx.fillText("Powerup: can either reset the size of your shape or give invincibility for a few seconds.", 70, 332);
-    ctx.fillText("Careful: causes all the squares to be red for a few seconds.", 70, 382);
-
-    // Draw rectangle button
-    ctx.font = "40pt Montserrat";
-    ctx.fillStyle = "#000000";
-    ctx.fillText("RETURN", this.game.x / 2 - 100, this.game.y / 1.2);
-
-    //The rectangle provides the click area for the button
-    const buttonRectRules = {
-      pX: parent.game.x / 2 - 90,
-      pY: parent.game.y / 1.2 - 40,
-      width: 230,
-      height: 50
-    };
-
-    // Listen for mouse click
-    const mouseClick = e => {
-      let mouseX;
-      let mouseY;
-      const rect = this.game.canvas.getBoundingClientRect();
-      mouseX = e.clientX - rect.left;
-      mouseY = e.clientY - rect.top;
-
-      // Check click for RETURN
-      if (
-        mouseX > buttonRectRules.pX &&
-        mouseX < buttonRectRules.pX + buttonRectRules.width &&
-        mouseY < buttonRectRules.pY + buttonRectRules.height &&
-        mouseY > buttonRectRules.pY
-      ) {
-        //console.log("Clicked!!");
-        document.removeEventListener("click", mouseClick);
-        this.gameStatus = "beginscreen";
-      }
-    };
-    this.game.canvas.addEventListener("click", mouseClick, false);
-  }
-
   endGame(ctx) {
-    const parent = this;
+    // Bring back the cursor again
     this.game.canvas.style.cursor = "default";
+
     // Clear screen
     ctx.clearRect(0, 0, this.game.x, this.game.y);
 
@@ -584,53 +594,17 @@ class Game {
     ctx.font = "30pt Montserrat";
     ctx.fillText("Final score: " + this.points, this.game.x / 2, this.game.y / 1.8);
 
-    // Draw rectangle button
+    // Place 'BACK TO MENU' text
     ctx.font = "40pt Montserrat";
     ctx.fillStyle = "#000000";
     ctx.fillText("BACK TO MENU", this.game.x / 2, this.game.y / 1.2);
-
-    //The rectangle provides the click area for the button
-    const buttonRectGO = {
-      pX: parent.game.x / 4,
-      pY: parent.game.y / 1.3,
-      width: 445,
-      height: 80
-    };
-
-    // Listen for mouse click
-    const mouseClickGO = e => {
-      let mouseX;
-      let mouseY;
-      const rect = this.game.canvas.getBoundingClientRect();
-      mouseX = e.clientX - rect.left;
-      mouseY = e.clientY - rect.top;
-      //console.log(`X: ${mouseX}, pX: ${buttonRectGO.pX} // Y: ${mouseY}, pY: ${buttonRectGO.pY}`);
-
-      // Check click for MENU
-      if (
-        mouseX > buttonRectGO.pX &&
-        mouseX < buttonRectGO.pX + buttonRectGO.width &&
-        mouseY < buttonRectGO.pY + buttonRectGO.height &&
-        mouseY > buttonRectGO.pY
-      ) {
-        document.removeEventListener("click", mouseClickGO);
-        this.gameStatus = "beginscreen";
-        //console.log('Clicked!!')
-        //this.game.canvas.removeEventListener("click", mouseClickGO, false);
-      }
-    };
-    this.game.canvas.addEventListener("click", mouseClickGO, false);
-
-    //this.gameStatus = "stopgame";
   }
 
   loopGame() {
     // Set up the canvas elements
     const ctx = this.game.context;
-    //ctx.clearRect(0, 0, this.game.x, this.game.y);
-    //console.log('clear screen')
-    // disabled because it's moved.
 
+    // Evaluate game state and run correct function
     switch (this.gameStatus) {
       case "beginscreen":
         this.beginScreen(ctx);
@@ -645,12 +619,13 @@ class Game {
         this.rulesScreen(ctx);
     }
 
-    // Loop, except when it's game over
+    // Loop over loopGame()
     window.requestAnimationFrame(this.loopGame.bind(this));
   }
 }
 
-// Running the game
+// MAIN CODE
+// Starting the game
 
-let sqSquared = new Game();
+const sqSquared = new Game();
 sqSquared.startGame();
