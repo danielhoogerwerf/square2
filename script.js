@@ -36,6 +36,7 @@ class Player {
     // ctx.translate(this.pX, this.pY);
     //ctx.rotate(this.pAngle);
     //ctx.fillRect(this.pWidth / -2, this.pHeight / -2, this.pWidth, this.pHeight);
+    //console.log(`Width: ${this.pWidth}, Height = ${this.pHeight}`)
     ctx.fillRect(this.pX, this.pY, this.pWidth, this.pHeight);
     //this.pAngle += (Math.PI / 180) * 1;
     // ctx.restore();
@@ -46,6 +47,13 @@ class Player {
     this.pHeight += 1;
     this.pX -= 0.5;
     this.pY -= 0.5;
+  }
+
+  decreaseSize() {
+    this.pWidth = 25;
+    this.pHeight = 25;
+    this.pX += 12.5;
+    this.pY += 12.5;
   }
 }
 
@@ -199,13 +207,103 @@ class Enemies {
   }
 }
 
+class PowerUps {
+  constructor(direction, x, y, speed, poweruptype) {
+    this.puWidth = 25;
+    this.puHeight = 25;
+    this.puSpeed = speed;
+    this.puDirection = direction;
+    this.canvasWidth = x;
+    this.canvasHeight = y;
+    this.powerUp = poweruptype;
+    this.puX = this.getStartingXPos();
+    this.puY = this.getStartingYPos();
+  }
+
+  drawPowerUp(ctx) {
+    switch (this.powerUp) {
+      case "good":
+        ctx.fillStyle = "black";
+      case "bad":
+        ctx.fillStyle = "red";
+    }
+
+    ctx.beginPath();
+    ctx.arc(this.puX, this.puY, 13, (Math.PI / 180) * 0, (Math.PI / 180) * 360);
+    ctx.fill();
+    ctx.closePath();
+  }
+
+  activatePowerUp() {
+    return this.powerUp;
+  }
+
+  getStartingXPos() {
+    switch (this.puDirection) {
+      case "L":
+        return -200;
+      case "R":
+        return this.canvasWidth + 200;
+      case "T":
+        return Math.floor(Math.random() * this.canvasWidth);
+      case "B":
+        return Math.floor(Math.random() * this.canvasWidth);
+    }
+  }
+
+  getStartingYPos() {
+    switch (this.puDirection) {
+      case "L":
+        return Math.floor(Math.random() * this.canvasHeight);
+      case "R":
+        return Math.floor(Math.random() * this.canvasHeight);
+      case "T":
+        return -200;
+      case "B":
+        return this.canvasHeight + 200;
+    }
+  }
+
+  movePowerUp() {
+    switch (this.puDirection) {
+      case "L":
+        this.moveHorizontalFromLeft();
+        break;
+      case "R":
+        this.moveHorizontalFromRight();
+        break;
+      case "T":
+        this.moveVerticalFromTop();
+        break;
+      case "B":
+        this.moveVerticalFromBottom();
+        break;
+    }
+  }
+
+  moveHorizontalFromLeft() {
+    this.puX += this.puSpeed;
+  }
+  moveHorizontalFromRight() {
+    this.puX -= this.puSpeed;
+  }
+  moveVerticalFromTop() {
+    this.puY += this.puSpeed;
+  }
+  moveVerticalFromBottom() {
+    this.puY -= this.puSpeed;
+  }
+}
+
 // Game Controller
 class Game {
   constructor() {
     this.game = new GameInit();
     this.player = new Player();
     this.directionArray = ["L", "R", "T", "B"];
+    this.powerUpType = ["resetplayer", "invincibility", "evil"];
     this.points = 0;
+    this.powerUpStatus = "";
   }
 
   startGame() {
@@ -219,10 +317,14 @@ class Game {
   clearVars(status) {
     this.genCatch = [];
     this.genEnemy = [];
+    this.genPowerUp = [];
     this.frameCount = 0;
+    this.powerUpRandom = Math.floor(Math.random() * (480 - 300 + 1) + 300);
+    this.powerUpCounter = 0;
     this.points = 0;
     this.player.pWidth = 25;
     this.player.pHeight = 25;
+    this.powerUpStatus = "";
     this.gameStatus = status;
   }
 
@@ -234,6 +336,10 @@ class Game {
   generateRandomSpeed() {
     const randomSpeed = Math.floor(Math.random() * (12 - 4) + 4);
     return randomSpeed;
+  }
+
+  generateRandomPowerUp() {
+    return this.powerUpType[Math.floor(Math.random() * this.powerUpType.length)];
   }
 
   collisionDetection(x, y, w, h) {
@@ -253,6 +359,27 @@ class Game {
     ctx.textBaseline = "middle";
     ctx.fillStyle = "rgba(56, 56, 56, 0.30)";
     ctx.fillText("Score: " + amount, this.game.x / 2, this.game.y / 2);
+  }
+
+  setPowerUp(ptype) {
+    switch (ptype) {
+      case "resetplayer":
+        this.player.decreaseSize();
+        this.powerUpStatus = "";
+        break;
+      case "invincibility":
+        this.powerUpStatus = "invincibility";
+        break;
+      case "evil":
+        this.powerUpStatus = "evil";
+        this.genCatch.forEach(e => {
+          this.genEnemy.push(
+            new Enemies(this.generateRandomDirection(), this.game.x, this.game.y, this.generateRandomSpeed())
+          );
+        });
+        this.genCatch = [];
+        break;
+    }
   }
 
   addMousemoveListener() {
@@ -346,7 +473,7 @@ class Game {
   }
 
   beginScreen(ctx) {
-    // Needed for scoping issues
+    // Needed for scoping
     const parent = this;
 
     // Reset the mouse cursor to normal
@@ -392,8 +519,6 @@ class Game {
       }
     });
 
-    // needed to address scoping issues inside the img.onload function
-
     const img = new Image();
     img.onload = function() {
       // Clear the screen
@@ -408,8 +533,9 @@ class Game {
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
     ctx.font = "40pt Montserrat";
-    ctx.fillStyle = "#000000";
+    ctx.fillStyle = "rgba(10, 44, 39, 1)";
     ctx.fillText("PLAY", (this.game.x - 456) / 2 + 4, (this.game.y - 250) / 2 + 230);
+    ctx.fillStyle = "rgba(10, 44, 39, 1)";
     ctx.fillText("RULES", (this.game.x - 456) / 2 + 268, (this.game.y - 250) / 2 + 230);
   }
 
@@ -527,13 +653,39 @@ class Game {
         );
         break;
       case 48:
-        this.genCatch.push(
-          new Catch(this.generateRandomDirection(), this.game.x, this.game.y, this.generateRandomSpeed())
-        );
+        if (this.powerUpStatus !== "evil") {
+          this.genCatch.push(
+            new Catch(this.generateRandomDirection(), this.game.x, this.game.y, this.generateRandomSpeed())
+          );
+        }
         this.frameCount = 0;
         break;
     }
     this.frameCount++;
+
+    // Perform a count of frames and kick-off a powerup at random intervals seconds
+    if (this.powerUpCounter >= 300) {
+      console.log("powerup released!");
+      this.powerUpStatus = "";
+      if (this.powerUpCounter === this.powerUpRandom) {
+        console.log("created powerup!");
+        this.genPowerUp.push(
+          new PowerUps(
+            this.generateRandomDirection(),
+            this.game.x,
+            this.game.y,
+            this.generateRandomSpeed(),
+            this.generateRandomPowerUp()
+          )
+        );
+        this.powerUpRandom = Math.floor(Math.random() * (480 - 300 + 1) + 300);
+        this.powerUpCounter = 0;
+      }
+    }
+    this.powerUpCounter++;
+
+    // Check for PowerUp State
+    this.setPowerUp(this.powerUpStatus);
 
     // Draw the score
     this.drawScore(ctx, this.points);
@@ -554,27 +706,51 @@ class Game {
       }
 
       // Check for collision and if so, it's game over :-)
-      if (this.collisionDetection(enemy.eX, enemy.eY, enemy.eWidth, enemy.eHeight)) {
+      if (
+        this.collisionDetection(enemy.eX, enemy.eY, enemy.eWidth, enemy.eHeight) &&
+        this.powerUpStatus !== "invincibility"
+      ) {
         this.gameStatus = "gameover";
       }
     });
 
     // Draw the catcher squares and remove them if they are off-screen
-    this.genCatch.forEach((catcher, index) => {
-      catcher.moveCatch();
-      catcher.drawCatch(ctx, 1);
-      if (catcher.cX > this.game.x + 200 || catcher.cX < -200) {
-        this.genCatch.splice(index, 1);
+    if (this.powerUpStatus !== "evil") {
+      this.genCatch.forEach((catcher, index) => {
+        catcher.moveCatch();
+        catcher.drawCatch(ctx, 1);
+        if (catcher.cX > this.game.x + 200 || catcher.cX < -200) {
+          this.genCatch.splice(index, 1);
+        }
+        if (catcher.cY > this.game.y + 200 || catcher.cY < -200) {
+          this.genCatch.splice(index, 1);
+        }
+
+        // Check for collision and if so, remove the catcher and add a point
+        if (this.collisionDetection(catcher.cX, catcher.cY, catcher.cWidth, catcher.cHeight)) {
+          this.points++;
+          this.player.increaseSize();
+          this.genCatch.splice(index, 1);
+        }
+      });
+    }
+
+    // Draw the powerups and remove them if they are off-screen
+    this.genPowerUp.forEach((powerup, index) => {
+      powerup.movePowerUp();
+      powerup.drawPowerUp(ctx);
+      if (powerup.puX > this.game.x + 200 || powerup.puX < -200) {
+        this.genPowerUp.splice(index, 1);
       }
-      if (catcher.cY > this.game.y + 200 || catcher.cY < -200) {
-        this.genCatch.splice(index, 1);
+      if (powerup.puY > this.game.y + 200 || powerup.puY < -200) {
+        this.genPowerUp.splice(index, 1);
       }
 
-      // Check for collision and if so, remove the catcher and add a point
-      if (this.collisionDetection(catcher.cX, catcher.cY, catcher.cWidth, catcher.cHeight)) {
-        this.points++;
-        this.player.increaseSize();
-        this.genCatch.splice(index, 1);
+      // Check for collision and if so, it's game over :-)
+      if (this.collisionDetection(powerup.puX, powerup.puY, powerup.puWidth, powerup.puHeight)) {
+        this.powerUpStatus = powerup.activatePowerUp();
+        console.log(this.powerUpStatus);
+        this.genPowerUp.splice(index, 1);
       }
     });
   }
