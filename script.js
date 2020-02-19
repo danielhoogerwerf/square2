@@ -28,10 +28,11 @@ class Player {
     this.pX = 450;
     this.pY = 300;
     this.pAngle = 0;
+    this.fillStyle = "black"
   }
 
   drawPlayer(ctx) {
-    ctx.fillStyle = "black";
+    ctx.fillStyle = this.fillStyle;
     // ctx.save();
     // ctx.translate(this.pX, this.pY);
     //ctx.rotate(this.pAngle);
@@ -52,8 +53,16 @@ class Player {
   decreaseSize() {
     this.pWidth = 25;
     this.pHeight = 25;
-    this.pX += 12.5;
-    this.pY += 12.5;
+    this.pX += 3;
+    this.pY += 3;
+  }
+
+  playerTranslucentColor() {
+    this.fillStyle = "rgba(132, 132, 132, 1.0)";
+  }
+
+  playerNormalColor() {
+    this.fillStyle = "black";
   }
 }
 
@@ -361,17 +370,20 @@ class Game {
     ctx.fillText("Score: " + amount, this.game.x / 2, this.game.y / 2);
   }
 
-  setPowerUp(ptype) {
+  setPowerUp(ctx, ptype) {
     switch (ptype) {
       case "resetplayer":
         this.player.decreaseSize();
-        this.powerUpStatus = "";
+        ctx.fillText("Reset Size", this.game.x / 2, this.game.y / 3);
         break;
       case "invincibility":
         this.powerUpStatus = "invincibility";
+        this.player.playerTranslucentColor();
+        ctx.fillText("Invincibility", this.game.x / 2, this.game.y / 3);
         break;
       case "evil":
         this.powerUpStatus = "evil";
+        ctx.fillText("Watch Out!", this.game.x / 2, this.game.y / 3);
         this.genCatch.forEach(e => {
           this.genEnemy.push(
             new Enemies(this.generateRandomDirection(), this.game.x, this.game.y, this.generateRandomSpeed())
@@ -667,6 +679,7 @@ class Game {
     if (this.powerUpCounter >= 300) {
       console.log("powerup released!");
       this.powerUpStatus = "";
+      this.player.playerNormalColor();
       if (this.powerUpCounter === this.powerUpRandom) {
         console.log("created powerup!");
         this.genPowerUp.push(
@@ -678,14 +691,14 @@ class Game {
             this.generateRandomPowerUp()
           )
         );
-        this.powerUpRandom = Math.floor(Math.random() * (480 - 300 + 1) + 300);
+        this.powerUpRandom = Math.floor(Math.random() * (520 - 300 + 1) + 300);
         this.powerUpCounter = 0;
       }
     }
     this.powerUpCounter++;
 
     // Check for PowerUp State
-    this.setPowerUp(this.powerUpStatus);
+    this.setPowerUp(ctx, this.powerUpStatus);
 
     // Draw the score
     this.drawScore(ctx, this.points);
