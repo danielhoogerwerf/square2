@@ -22,8 +22,10 @@ class GameInit {
 
 class Sounds {
   constructor() {
-    this.audioCth = new Audio("snd/Catch.m4a")
+    this.audioCth = new Audio("snd/Catch.m4a");
     this.audioGO = new Audio("snd/Gameover.m4a");
+    this.audioWO = new Audio("snd/WatchOut.m4a");
+    this.audioPU = new Audio("snd/PowerUp.m4a");
     this.bgMusicBegin = new Audio("snd/BGMusicBegin.m4a");
     this.bgMusicPlay = new Audio("snd/BGMusicPlay.m4a");
     this.bgMusicGO = new Audio("snd/BGMusicGO.m4a");
@@ -36,14 +38,14 @@ class Sounds {
     contxtBgBegin.connect(filter);
     filter.connect(contxt.destination);
     filter.type = "lowpass";
-    filter.frequency.value = 250;
+    filter.frequency.value = 280;
     filter.gain.value = 30;
   }
 
   playMusicBegin() {
     this.bgMusicGO.pause();
     this.bgMusicBegin.currentTime = 0;
-    this.bgMusicBegin.volume = 0.7;
+    this.bgMusicBegin.volume = 0.75;
     this.bgMusicBegin.loop = true;
     this.bgMusicBegin.addEventListener(
       "timeupdate",
@@ -59,7 +61,7 @@ class Sounds {
     this.bgMusicBegin.play();
   }
 
-  playMusicGame(){
+  playMusicGame() {
     this.bgMusicBegin.pause();
     this.bgMusicGO.pause();
     this.bgMusicPlay.currentTime = 0;
@@ -80,6 +82,8 @@ class Sounds {
   }
 
   playMusicGameOver() {
+    this.audioWO.pause();
+    this.audioPU.pause();
     this.bgMusicPlay.pause();
     this.bgMusicGO.currentTime = 0;
     this.bgMusicGO.volume = 0.7;
@@ -95,7 +99,7 @@ class Sounds {
       },
       false
     );
-    this.bgMusicGO.play();    
+    this.bgMusicGO.play();
   }
 
   playCatchSound() {
@@ -108,6 +112,18 @@ class Sounds {
     this.audioGO.currentTime = 0;
     this.audioGO.volume = 0.8;
     this.audioGO.play();
+  }
+
+  playPowerUpSound() {
+    this.audioPU.currentTime = 0;
+    this.audioPU.volume = 0.8;
+    this.audioPU.play();
+  }
+
+  playWatchOutSound() {
+    //this.audioWO.currentTime = 0;
+    this.audioWO.volume = 0.8;
+    this.audioWO.play();
   }
 }
 
@@ -476,24 +492,30 @@ class Game {
       case "resetplayer":
         this.player.decreaseSize();
         this.speedCounter = 0;
+        this.sounds.playPowerUpSound();
+        ctx.fillStyle = "black";
         ctx.fillText("Reducing your square!", this.game.x / 2, this.game.y / 3);
         break;
       case "invincibility":
         this.powerUpStatus = "invincibility";
+        this.sounds.playPowerUpSound();
         this.player.playerTranslucentColor();
+        ctx.fillStyle = "black";
         ctx.fillText("Invincibility!", this.game.x / 2, this.game.y / 3);
         break;
       case "evil":
         this.powerUpStatus = "evil";
+        this.sounds.playWatchOutSound();
+        ctx.fillStyle = "rgba(240, 44, 39, 1.0";
         ctx.fillText("Watch Out!", this.game.x / 2, this.game.y / 3);
         this.genCatch.forEach(e => {
           this.genEnemy.push(
-            new Enemies(this.generateRandomDirection(), this.game.x, this.game.y, this.generateRandomSpeed(0)),
             new Enemies(this.generateRandomDirection(), this.game.x, this.game.y, this.generateRandomSpeed(0)),
             new Enemies(this.generateRandomDirection(), this.game.x, this.game.y, this.generateRandomSpeed(0))
           );
         });
         this.genCatch = [];
+        ctx.fillStyle = "black";
         break;
     }
   }
