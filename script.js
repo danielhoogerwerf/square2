@@ -393,12 +393,32 @@ class Game {
     this.powerUpStatus = "";
   }
 
-  startGame() {
+  loadingGame() {
     this.game.initializer();
+    const ctx = this.game.context;
+    
+    // Clear the screen
+    ctx.clearRect(0, 0, this.game.x, this.game.y);
+
+    ctx.font = "300 36px Arial";
+    ctx.fillStyle = "black";
+    ctx.textAlign = "center"
+    ctx.fillText("Loading...", this.game.x / 2, this.game.y / 2);
+    this.gameStatus = "preload";
+
+    window.addEventListener("load", event => {
+      this.addMousemoveListener(this.player);
+      this.addClickListener();
+      ctx.clearRect(0, 0, this.game.x, this.game.y);
+      ctx.fillText("Game is loaded. Press PLAY GAME to start.", this.game.x / 2, this.game.y / 2);
+      ctx.font = "700 40px Arial";
+      ctx.fillText("PLAY GAME", this.game.x / 2, this.game.y / 1.5);
+    });
+  }
+
+  startGame() {
     this.clearVars("beginscreen");
     window.requestAnimationFrame(this.loopGame.bind(this));
-    this.addMousemoveListener(this.player);
-    this.addClickListener();
     this.sounds.audioFilterBegin();
     this.sounds.playMusicBegin();
   }
@@ -424,7 +444,7 @@ class Game {
   }
 
   generateRandomSpeed(multi) {
-    const randomSpeed = Math.floor(Math.random() * (12 - 4) + 4);
+    const randomSpeed = Math.floor(Math.random() * (11 - 4) + 4);
     return multi > 0 ? randomSpeed + multi : randomSpeed;
   }
 
@@ -501,6 +521,13 @@ class Game {
     mouseY = e.clientY - rect.top;
 
     // Define the clickable areas for the game sections
+    const preloadButton = {
+      pX: this.game.x / 2.7,
+      pY: this.game.y / 1.7 + 20,
+      width: 235,
+      height: 35
+    };
+
     const beginScreenButtons = {
       pX: this.game.x / 3 - 80,
       pY: this.game.y / 2.5 + 140,
@@ -525,6 +552,18 @@ class Game {
     };
 
     switch (gameState) {
+      case "preload":
+        // The click area for the button START GAME on the rules screen
+        if (
+          mouseX > preloadButton.pX &&
+          mouseX < preloadButton.pX + preloadButton.width &&
+          mouseY < preloadButton.pY + preloadButton.height &&
+          mouseY > preloadButton.pY
+        ) {
+          this.startGame();
+          //this.gameStatus = "beginscreen";
+        }
+        break;
       case "beginscreen":
         // The click area for the buttons PLAY & RULES on the begin screen
         if (
@@ -956,4 +995,4 @@ class Game {
 // Starting the game
 
 const sqSquared = new Game();
-sqSquared.startGame();
+sqSquared.loadingGame();
