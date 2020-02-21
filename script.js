@@ -36,7 +36,7 @@ class Sounds {
     contxtBgBegin.connect(filter);
     filter.connect(contxt.destination);
     filter.type = "lowpass";
-    filter.frequency.value = 300;
+    filter.frequency.value = 250;
     filter.gain.value = 30;
   }
 
@@ -61,6 +61,7 @@ class Sounds {
 
   playMusicGame(){
     this.bgMusicBegin.pause();
+    this.bgMusicGO.pause();
     this.bgMusicPlay.currentTime = 0;
     this.bgMusicPlay.volume = 0.7;
     this.bgMusicPlay.loop = true;
@@ -98,10 +99,14 @@ class Sounds {
   }
 
   playCatchSound() {
+    this.audioCth.currentTime = 0;
+    this.audioCth.volume = 0.8;
     this.audioCth.play();
   }
 
   playGameOverSound() {
+    this.audioGO.currentTime = 0;
+    this.audioGO.volume = 0.8;
     this.audioGO.play();
   }
 }
@@ -119,14 +124,7 @@ class Player {
 
   drawPlayer(ctx) {
     ctx.fillStyle = this.fillStyle;
-    // ctx.save();
-    // ctx.translate(this.pX, this.pY);
-    //ctx.rotate(this.pAngle);
-    //ctx.fillRect(this.pWidth / -2, this.pHeight / -2, this.pWidth, this.pHeight);
-    //console.log(`Width: ${this.pWidth}, Height = ${this.pHeight}`)
     ctx.fillRect(this.pX, this.pY, this.pWidth, this.pHeight);
-    //this.pAngle += (Math.PI / 180) * 1;
-    // ctx.restore();
   }
 
   increaseSize() {
@@ -391,6 +389,7 @@ class Game {
     this.powerUpType = ["resetplayer", "invincibility", "evil"];
     this.points = 0;
     this.powerUpStatus = "";
+    this.pAngle = 0;
   }
 
   loadingGame() {
@@ -410,6 +409,7 @@ class Game {
       this.addMousemoveListener(this.player);
       this.addClickListener();
       ctx.clearRect(0, 0, this.game.x, this.game.y);
+      ctx.font = "300 36px Arial";
       ctx.fillText("Game is loaded. Press PLAY GAME to start.", this.game.x / 2, this.game.y / 2);
       ctx.font = "700 40px Arial";
       ctx.fillText("PLAY GAME", this.game.x / 2, this.game.y / 1.5);
@@ -538,16 +538,18 @@ class Game {
     };
 
     const rulesScreenButton = {
-      pX: this.game.x / 2 - 93,
+      pX: this.game.x / 2.8,
       pY: this.game.y / 1.2 - 40,
-      width: 220,
+      width: 250,
       height: 60
     };
 
     const gameOverButton = {
-      pX: this.game.x / 4 + 14,
-      pY: this.game.y / 1.3,
-      width: 423,
+      pX: this.game.x / 4,
+      pY: this.game.y / 1.4,
+      rX: this.game.x / 1.4,
+      rY: this.game.y / 1.12,
+      width: 420,
       height: 60
     };
 
@@ -561,7 +563,6 @@ class Game {
           mouseY > preloadButton.pY
         ) {
           this.startGame();
-          //this.gameStatus = "beginscreen";
         }
         break;
       case "beginscreen":
@@ -601,6 +602,14 @@ class Game {
           mouseX < gameOverButton.pX + gameOverButton.width &&
           mouseY < gameOverButton.pY + gameOverButton.height &&
           mouseY > gameOverButton.pY
+        ) {
+          this.clearVars("playgame");
+          this.sounds.playMusicGame();
+          } else if (
+          mouseX > gameOverButton.rX &&
+          mouseX < gameOverButton.rX + gameOverButton.width &&
+          mouseY < gameOverButton.rY + gameOverButton.height &&
+          mouseY > gameOverButton.rY
         ) {
           this.clearVars("beginscreen");
           this.sounds.playMusicBegin();
@@ -732,6 +741,7 @@ class Game {
 
     // Place legenda text and line
     //ctx.fillStyle = "rgba(69, 67, 70, 1.0)";
+    ctx.textAlign = "left";
     ctx.fillStyle = "black";
     ctx.font = "700 14pt Montserrat";
     ctx.fillText("How to play", 20, 185);
@@ -768,6 +778,7 @@ class Game {
     // Place rules text
     ctx.fillStyle = "black";
     ctx.font = "14pt Montserrat";
+    
     ctx.fillText("Catching this square gives you points, but it increases the size of your square.", 70, 226);
     ctx.fillText("Touching this square means 'game over'.", 70, 276);
     ctx.fillText("Hitting this powerup can give you one of the following options:", 70, 326);
@@ -778,7 +789,8 @@ class Game {
     // Place RETURN text
     ctx.font = "40pt Montserrat";
     ctx.fillStyle = "#000000";
-    ctx.fillText("RETURN", this.game.x / 2 - 100, this.game.y / 1.2);
+    ctx.textAlign = "center"
+    ctx.fillText("RETURN", this.game.x / 2, this.game.y / 1.2);
   }
 
   playGame(ctx) {
@@ -957,14 +969,28 @@ class Game {
     ctx.fillStyle = "black";
     ctx.font = "60pt Montserrat";
     ctx.textAlign = "center";
-    ctx.fillText("Game Over!", this.game.x / 2, this.game.y / 2.5);
+    ctx.fillText("Game Over!", this.game.x / 2, this.game.y / 3);
     ctx.font = "30pt Montserrat";
-    ctx.fillText("Final score: " + this.points, this.game.x / 2, this.game.y / 1.8);
+    ctx.fillText("Final score: " + this.points, this.game.x / 2, this.game.y / 2.2);
 
-    // Place 'BACK TO MENU' text
-    ctx.font = "40pt Montserrat";
-    ctx.fillStyle = "#000000";
-    ctx.fillText("BACK TO MENU", this.game.x / 2, this.game.y / 1.2);
+    // Place rotating square
+    ctx.save();
+    ctx.translate(this.game.x / 3.7, this.game.y / 1.3 - 4);
+    ctx.rotate(this.pAngle);
+    ctx.fillRect(25 / -2, 25 / -2, 25, 25);
+    // console.log(`Width: ${this.pWidth}, Height = ${this.pHeight}`)
+    // ctx.fillRect(this.pX, this.pY, this.pWidth, this.pHeight);
+    this.pAngle += (Math.PI / 180) * -4;
+    ctx.restore();
+
+    // Place 'MENU' text
+    ctx.font = "700 40pt Montserrat";
+    ctx.fillStyle = "black";
+    ctx.moveTo(this.game.x / 3, this.game.y / 1.3);
+    
+    ctx.fillText("PLAY AGAIN", this.game.x / 2, this.game.y / 1.3);
+    ctx.font = "300 18pt Montserrat";
+    ctx.fillText("BACK TO MENU", this.game.x / 1.15, this.game.y / 1.05);
   }
 
   loopGame() {
