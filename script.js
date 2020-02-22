@@ -114,16 +114,18 @@ class Sounds {
     this.audioGO.play();
   }
 
-  playPowerUpSound() {
-    this.audioPU.currentTime = 0;
-    this.audioPU.volume = 0.8;
-    this.audioPU.play();
-  }
-
-  playWatchOutSound() {
-    //this.audioWO.currentTime = 0;
-    this.audioWO.volume = 0.8;
-    this.audioWO.play();
+  playPowerUpSound(powerup) {
+    switch (powerup) {
+      case "evil":
+        this.audioWO.currentTime = 0;
+        this.audioWO.volume = 0.8;
+        this.audioWO.play();
+        break;
+      default:
+        this.audioPU.currentTime = 0;
+        this.audioPU.volume = 0.8;
+        this.audioPU.play();
+    }
   }
 }
 
@@ -402,7 +404,7 @@ class Game {
     this.player = new Player();
     this.sounds = new Sounds();
     this.directionArray = ["L", "R", "T", "B"];
-    this.powerUpType = ["resetplayer", "invincibility", "evil"];
+    this.powerUpType = ["resetplayer", "invincibility", "evil", "points"];
     this.points = 0;
     this.powerUpStatus = "";
     this.pAngle = 0;
@@ -411,13 +413,13 @@ class Game {
   loadingGame() {
     this.game.initializer();
     const ctx = this.game.context;
-    
+
     // Clear the screen
     ctx.clearRect(0, 0, this.game.x, this.game.y);
 
     ctx.font = "300 36px Arial";
     ctx.fillStyle = "black";
-    ctx.textAlign = "center"
+    ctx.textAlign = "center";
     ctx.fillText("Loading...", this.game.x / 2, this.game.y / 2);
     this.gameStatus = "preload";
 
@@ -448,6 +450,9 @@ class Game {
     this.powerUpCounter = 0;
     this.speedCounter = 0;
     this.points = 0;
+    this.pointsSet = false;
+    this.squarePoints = 0;
+    this.powerUpProgressBar = 301;
     this.player.pWidth = 25;
     this.player.pHeight = 25;
     this.powerUpStatus = "";
@@ -460,7 +465,7 @@ class Game {
   }
 
   generateRandomSpeed(multi) {
-    const randomSpeed = Math.floor(Math.random() * (11 - 4) + 4);
+    const randomSpeed = Math.floor(Math.random() * (10 - 4) + 4);
     return multi > 0 ? randomSpeed + multi : randomSpeed;
   }
 
@@ -492,20 +497,25 @@ class Game {
       case "resetplayer":
         this.player.decreaseSize();
         this.speedCounter = 0;
-        this.sounds.playPowerUpSound();
         ctx.fillStyle = "black";
         ctx.fillText("Reducing your square!", this.game.x / 2, this.game.y / 3);
         break;
       case "invincibility":
         this.powerUpStatus = "invincibility";
-        this.sounds.playPowerUpSound();
         this.player.playerTranslucentColor();
+        ctx.fillStyle = "rgba(56, 56, 56, 0.30)";
+        this.powerUpProgressBar--;
+        ctx.fillRect(this.game.x / 2.6, this.game.y / 2.7, this.powerUpProgressBar, 20);
         ctx.fillStyle = "black";
         ctx.fillText("Invincibility!", this.game.x / 2, this.game.y / 3);
         break;
+      case "points":
+        ctx.fillStyle = "black";
+        ctx.fillText("100 Points!", this.game.x / 2, this.game.y / 3);
+        if (this.pointsSet === false) {this.points += 100; this.pointsSet = true;}
+        break;
       case "evil":
         this.powerUpStatus = "evil";
-        this.sounds.playWatchOutSound();
         ctx.fillStyle = "rgba(240, 44, 39, 1.0";
         ctx.fillText("Watch Out!", this.game.x / 2, this.game.y / 3);
         this.genCatch.forEach(e => {
@@ -627,7 +637,7 @@ class Game {
         ) {
           this.clearVars("playgame");
           this.sounds.playMusicGame();
-          } else if (
+        } else if (
           mouseX > gameOverButton.rX &&
           mouseX < gameOverButton.rX + gameOverButton.width &&
           mouseY < gameOverButton.rY + gameOverButton.height &&
@@ -691,20 +701,20 @@ class Game {
     img.onload = function() {
       // Clear the screen
       ctx.clearRect(0, 0, parent.game.x, parent.game.y);
-      //console.log('drawing image')
       ctx.drawImage(img, (parent.game.x - 456) / 2, (parent.game.y - 450) / 2);
+      
+      // Draw menu buttons
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.font = "40pt Montserrat";
+      ctx.fillStyle = "rgba(10, 44, 39, 1)";
+      ctx.fillText("PLAY", (parent.game.x - 456) / 2 + 4, (parent.game.y - 250) / 2 + 230);
+      ctx.fillStyle = "rgba(10, 44, 39, 1)";
+      ctx.fillText("RULES", (parent.game.x - 456) / 2 + 268, (parent.game.y - 250) / 2 + 230);
     };
     img.src = "img/logosmall.png";
     ctx.fillStyle = "black";
 
-    // Draw menu buttons
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    ctx.font = "40pt Montserrat";
-    ctx.fillStyle = "rgba(10, 44, 39, 1)";
-    ctx.fillText("PLAY", (this.game.x - 456) / 2 + 4, (this.game.y - 250) / 2 + 230);
-    ctx.fillStyle = "rgba(10, 44, 39, 1)";
-    ctx.fillText("RULES", (this.game.x - 456) / 2 + 268, (this.game.y - 250) / 2 + 230);
   }
 
   rulesScreen(ctx) {
@@ -800,18 +810,18 @@ class Game {
     // Place rules text
     ctx.fillStyle = "black";
     ctx.font = "14pt Montserrat";
-    
+
     ctx.fillText("Catching this square gives you points, but it increases the size of your square.", 70, 226);
     ctx.fillText("Touching this square means 'game over'.", 70, 276);
     ctx.fillText("Hitting this powerup can give you one of the following options:", 70, 326);
     ctx.fillText("- Resets your square size and reduces the speed back to normal", 70, 351);
     ctx.fillText("- Gives your square invincibility for a few seconds", 70, 375);
-    ctx.fillText("- Causes that all the squares change to red for a few seconds", 70, 398);
+    ctx.fillText("- Causes that all the squares change to red for a few seconds (the evil powerup 😈)", 70, 398);
 
     // Place RETURN text
     ctx.font = "40pt Montserrat";
     ctx.fillStyle = "#000000";
-    ctx.textAlign = "center"
+    ctx.textAlign = "center";
     ctx.fillText("RETURN", this.game.x / 2, this.game.y / 1.2);
   }
 
@@ -830,7 +840,7 @@ class Game {
         }
         break;
       case 30:
-        if (this.speedCounter > 5) {
+        if (this.speedCounter > 5 || this.points >= 500) {
           this.genEnemy.push(
             new Enemies(this.generateRandomDirection(), this.game.x, this.game.y, this.generateRandomSpeed(0))
           );
@@ -839,6 +849,12 @@ class Game {
       case 35:
         if (this.powerUpStatus !== "evil" && this.speedCounter > 10) {
           this.genCatch.push(
+            new Catch(
+              this.generateRandomDirection(),
+              this.game.x,
+              this.game.y,
+              this.generateRandomSpeed(this.speedCounter)
+            ),
             new Catch(
               this.generateRandomDirection(),
               this.game.x,
@@ -865,13 +881,20 @@ class Game {
               this.game.x,
               this.game.y,
               this.generateRandomSpeed(this.speedCounter)
+            ),
+            new Catch(
+              this.generateRandomDirection(),
+              this.game.x,
+              this.game.y,
+              this.generateRandomSpeed(this.speedCounter)
             )
           );
         }
         this.frameCount = 0;
+        this.points++;
         break;
       case 50:
-        if (this.speedCounter > 10) {
+        if (this.speedCounter > 10 || this.points >= 800) {
           this.genEnemy.push(
             new Enemies(this.generateRandomDirection(), this.game.x, this.game.y, this.generateRandomSpeed(0))
           );
@@ -883,11 +906,11 @@ class Game {
 
     // Perform a count of frames and kick-off a powerup at random intervals in frames
     if (this.powerUpCounter >= 300) {
-      //console.log("powerup released!");
+      this.powerUpProgressBar = 301;
       this.powerUpStatus = "";
+      this.pointsSet = false;
       this.player.playerNormalColor();
       if (this.powerUpCounter === this.powerUpRandom) {
-        //console.log("created powerup!");
         this.genPowerUp.push(
           new PowerUps(
             this.generateRandomDirection(),
@@ -952,7 +975,8 @@ class Game {
 
         // Check for collision and if so, remove the catcher and add a point
         if (this.collisionDetection(catcher.cX, catcher.cY, catcher.cWidth, catcher.cHeight)) {
-          this.points++;
+          this.squarePoints++;
+          this.points += 20;
           this.player.increaseSize();
           this.sounds.playCatchSound();
           this.genCatch.splice(index, 1);
@@ -974,7 +998,8 @@ class Game {
       // Check for collision and if so, have fun!
       if (this.collisionDetection(powerup.puX, powerup.puY, powerup.puWidth, powerup.puHeight)) {
         this.powerUpStatus = powerup.activatePowerUp();
-        //console.log(this.powerUpStatus);
+        this.powerUpProgressBar -= this.powerUpCounter;
+        this.sounds.playPowerUpSound(this.powerUpStatus);
         this.genPowerUp.splice(index, 1);
       }
     });
@@ -992,25 +1017,26 @@ class Game {
     ctx.font = "60pt Montserrat";
     ctx.textAlign = "center";
     ctx.fillText("Game Over!", this.game.x / 2, this.game.y / 3);
-    ctx.font = "30pt Montserrat";
-    ctx.fillText("Final score: " + this.points, this.game.x / 2, this.game.y / 2.2);
+    ctx.font = "300 30pt Montserrat";
+    ctx.fillText("Final score: " + this.points, this.game.x / 2, this.game.y / 2.1);
+    ctx.font = "300 26pt Montserrat";
+    ctx.fillText("Squares caught: " + this.squarePoints, this.game.x / 2, this.game.y / 1.8);
 
     // Place rotating square
     ctx.save();
-    ctx.translate(this.game.x / 3.7, this.game.y / 1.3 - 4);
+    ctx.translate(this.game.x / 3.5, this.game.y / 1.3 - 4);
     ctx.rotate(this.pAngle);
     ctx.fillRect(25 / -2, 25 / -2, 25, 25);
-    // console.log(`Width: ${this.pWidth}, Height = ${this.pHeight}`)
-    // ctx.fillRect(this.pX, this.pY, this.pWidth, this.pHeight);
     this.pAngle += (Math.PI / 180) * -4;
     ctx.restore();
 
-    // Place 'MENU' text
+    // Place 'PLAY AGAIN' text
     ctx.font = "700 40pt Montserrat";
     ctx.fillStyle = "black";
     ctx.moveTo(this.game.x / 3, this.game.y / 1.3);
-    
-    ctx.fillText("PLAY AGAIN", this.game.x / 2, this.game.y / 1.3);
+    ctx.fillText("PLAY AGAIN", this.game.x / 1.95, this.game.y / 1.3);
+
+    // Place 'BACK TO MENU' text
     ctx.font = "300 18pt Montserrat";
     ctx.fillText("BACK TO MENU", this.game.x / 1.15, this.game.y / 1.05);
   }
@@ -1019,7 +1045,7 @@ class Game {
     // Set up the canvas elements
     const ctx = this.game.context;
 
-    // Evaluate game state and run correct function
+    // Evaluate game state and run correct method
     switch (this.gameStatus) {
       case "beginscreen":
         this.beginScreen(ctx);
