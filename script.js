@@ -454,7 +454,7 @@ class Game {
       ctx.font = "300 14px Arial";
       ctx.textAlign = "right"
       ctx.fillStyle = "rgba(56, 56, 56, 0.50)";
-      ctx.fillText("Squares2 v1.6, made by Daniel Hoogerwerf", this.game.x / 1.02, this.game.y / 1.02);
+      ctx.fillText("Squares2 v1.1, made by Daniel Hoogerwerf", this.game.x / 1.02, this.game.y / 1.02);
       ctx.textAlign = "left";
     });
   }
