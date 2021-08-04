@@ -10,5 +10,5 @@ It's a game using HTML5 canvas and browser API's to control the animations and s
 <br />A demo is available at: [sq2.danielslab.nl](https://sq2.danielslab.nl)
 
 ### `Frontend technologies` 
-HTML5 | Javascript ES6 | HTML5 | CSS3
+HTML5 | Javascript ES6 | CSS3
 <br />
